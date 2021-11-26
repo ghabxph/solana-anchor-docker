@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  build:
+    image: projectserum/build:v0.18.2-custom
+    build:
+      dockerfile: Dockerfile.base
+      args:
+        SOLANA_CLI: v1.8.0
+        ANCHOR_CLI: v0.18.2
+    volumes:
+      - .:/home/developer/workdir

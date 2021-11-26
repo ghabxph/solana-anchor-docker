@@ -1,0 +1,67 @@
+# Originally from:
+# https://github.com/project-serum/anchor/blob/master/docker/build/Dockerfile
+
+FROM ubuntu:18.04
+
+# Install base utilities.
+RUN apt-get update -qq && apt-get upgrade -qq && apt-get install -qq \
+    build-essential git curl wget jq pkg-config python3-pip \
+    libssl-dev libudev-dev
+
+ENV HOME="/home/developer"
+ENV PATH="${HOME}/.cargo/bin:${PATH}"
+ENV PATH="${HOME}/.local/share/solana/install/active_release/bin:${PATH}"
+ENV PATH="${HOME}/.nvm/versions/node/v17.0.1/bin:${PATH}"
+
+# Create new non-root user developer
+RUN adduser developer
+
+# Switch to non-root user developer
+USER developer
+
+# Set working directory to home
+WORKDIR ${HOME}
+
+# Install rust.
+RUN curl "https://sh.rustup.rs" -sfo rustup.sh && \
+    sh rustup.sh -y && \
+    rustup component add rustfmt clippy
+
+# Install node / npm / yarn.
+RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
+ENV NVM_DIR="${HOME}/.nvm"
+RUN . $NVM_DIR/nvm.sh && \
+    nvm install node v17.0.1 && \
+    nvm use node && \
+    nvm alias default node && \
+    npm install -g yarn
+
+# Container arguments
+ARG DEBIAN_FRONTEND=noninteractive
+ARG SOLANA_CLI
+ARG ANCHOR_CLI
+
+# Install Solana tools.
+RUN sh -c "$(curl -sSfL https://release.solana.com/${SOLANA_CLI}/install)"
+
+# Install anchor.
+RUN cargo install --git https://github.com/project-serum/anchor --tag ${ANCHOR_CLI} anchor-cli --locked
+
+ENV PATH="${HOME}/.nvm/versions/node/v17.1.0/bin:${PATH}"
+
+# Build a dummy program to bootstrap the BPF SDK (doing this speeds up builds).
+RUN anchor init dummy && \
+    cd dummy && \
+    anchor build && \
+    cd ../ && \
+    rm -fvr tmp
+RUN rm -fvr dummy
+
+# Generate a solana wallet
+RUN solana-keygen new
+
+# Set our working directory to workdir
+WORKDIR ${HOME}/workdir
+
+# Keep the container up and running
+CMD tail -f
