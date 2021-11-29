@@ -5,8 +5,10 @@ services:
     image: projectserum/build:v0.18.2-custom
     build:
       dockerfile: Dockerfile.base
+      context: .
       args:
         SOLANA_CLI: v1.8.0
         ANCHOR_CLI: v0.18.2
     volumes:
       - .:/home/developer/workdir
+      - ${HOME}/.config/solana:/home/developer/.config/solana
